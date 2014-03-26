@@ -1,0 +1,4 @@
+# Copyright (C) 2014 E.V.I.Z.I LLC.
+application.version=1.0.0-SNAPSHOT
+source.version=dev
+build.number=dev

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE hibernate-reverse-engineering
+  SYSTEM "http://hibernate.sourceforge.net/hibernate-reverse-engineering-3.0.dtd">
+<hibernate-reverse-engineering>
+    <!-- Include all tables from our schema/catalog -->
+    <!-- Specific tables can be excluded below -->
+  <schema-selection match-schema="EARCRUSH_VLE" />
+  <type-mapping>
+	<sql-type jdbc-type="VARCHAR" hibernate-type="String"/>
+    <sql-type jdbc-type="NUMERIC" hibernate-type="java.lang.Long" />
+    <sql-type jdbc-type="INTEGER" hibernate-type="java.lang.Integer" />
+    <sql-type jdbc-type="DECIMAL" hibernate-type="java.lang.Double" />
+  </type-mapping>
+
+  <!-- Exclude liquibase tables -->
+  <table-filter match-name="DATABASECHANGELOG.*" exclude="true"/>
+  
+</hibernate-reverse-engineering>

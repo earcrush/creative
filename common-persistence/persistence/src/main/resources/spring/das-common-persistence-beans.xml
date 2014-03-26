@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:util="http://www.springframework.org/schema/util"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           http://www.springframework.org/schema/beans/spring-beans-3.0.xsd
+           http://www.springframework.org/schema/tx
+           http://www.springframework.org/schema/tx/spring-tx.xsd
+           http://www.springframework.org/schema/context
+           http://www.springframework.org/schema/context/spring-context-3.0.xsd
+           http://www.springframework.org/schema/util http://www.springframework.org/schema/util/spring-util-3.0.xsd">
+
+  <context:annotation-config/>
+  <tx:annotation-driven/>
+  <context:component-scan base-package="com.itsoninc.das.common.persistence"/>
+
+  <!-- Process @PersistenceContext to inject entity manager factory -->
+  <bean class="org.springframework.orm.jpa.support.PersistenceAnnotationBeanPostProcessor" />
+
+  <!-- Translate vanilla JPA persistence exceptions into something meaningful -->
+  <bean class="org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor"/>
+
+  <bean id="entityManagerFactory" class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+    <property name="dataSource" ref="dataSource" />
+    <property name="jpaVendorAdapter">
+      <bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter" >
+      </bean>
+    </property>
+    <property name="jpaProperties" ref="jpaProperties"/>
+    <property name="persistenceUnitName" value="das-common-persistence"/>
+  </bean>
+
+  <bean id="hibernateJasyptConfiguration" class="org.jasypt.encryption.pbe.config.EnvironmentStringPBEConfig">
+    <property name="algorithm" value="PBEWithMD5AndTripleDES"/>
+    <!-- Use this to get password from a java system property (e.g. -Dproperty=value)
+    <property name="passwordSysPropertyName" value="jasypt.encryption.password"/>
+    -->
+    <!--  have jasypt read password from a system env property -->
+    <property name="passwordEnvName" value="JASYPT_ENCRYPTION_PASSWORD"/>
+  </bean>
+
+  <bean id="hibernateJasyptEncryptor" class="org.jasypt.encryption.pbe.PooledPBEStringEncryptor" init-method="initialize">
+    <property name="config" ref="hibernateJasyptConfiguration"/>
+    <property name="poolSize" value="4"/> <!-- TODO: we can override this from the env config if we need to -->
+  </bean>
+
+  <bean id="hibernateStringEncryptor" class="org.jasypt.hibernate4.encryptor.HibernatePBEStringEncryptor">
+    <property name="registeredName" value="hibernateStringEncryptor"/>
+    <property name="encryptor" ref="hibernateJasyptEncryptor"/>
+  </bean>
+
+  <bean id="secureRandom" class="java.security.SecureRandom"/>
+
+  <!--  Dummy jpa properties that can be overridden -->
+  <util:properties id="jpaProperties"/>
+
+  <!-- Properties -->
+  <bean id="defaultLocale" class="java.lang.String">
+    <constructor-arg value="en_US"/>
+  </bean>
+
+  <bean id="defaultTimezone" class="java.lang.String">
+    <constructor-arg value="America/Los_Angeles"/>
+  </bean>
+
+  <!-- adapters -->
+  <bean id="baseAdapter" abstract="true">
+    <property name="localeHelper" ref="localeHelper"/>
+    <property name="notificationAdapter" ref="notificationAdapter"/>
+    <property name="planCatalogHelper" ref="planCatalogHelper"/>
+    <property name="planPropertyHelper" ref="planPropertyHelper"/>
+    <property name="cronExpressionHelper" ref="cronExpressionHelper"/>
+    <property name="objectMapper" ref="jsonObjectMapper"/>
+    <property name="servicePolicyDao" ref="servicePolicyDao"/>
+  </bean>
+
+  <!-- to override this redefine this property in a later spring bean config -->
+  <bean id="planCatalogCacheEvictionIntervalInSeconds" class="java.lang.Long">
+    <constructor-arg value="3600"/> <!-- default 1 day -->
+  </bean>
+
+  <bean id="planCatalogAdapter" class="com.itsoninc.das.common.json.adapter.PlanCatalogAdapterImpl" parent="baseAdapter">
+    <property name="cacheEvictionIntervalInSeconds" ref="planCatalogCacheEvictionIntervalInSeconds"/>
+  </bean>
+
+  <bean id="servicePlanBundleAdapter" class="com.itsoninc.das.common.json.adapter.SubscriptionBundleAdapterImpl" parent="baseAdapter">
+    <property name="subscriptionHelper" ref="subscriptionHelper"/>
+    <property name="prorationHelper" ref="prorationHelper"/>
+    <property name="planCatalogDao" ref="planCatalogDao"/>
+  </bean>
+
+  <bean id="serviceUsageReportAdapter" class="com.itsoninc.das.common.json.adapter.ServiceUsageReportAdapterImpl" parent="baseAdapter"/>
+
+  <bean id="subscriptionHistoryRecordAdapter" class="com.itsoninc.das.common.json.adapter.SubscriptionHistoryRecordAdapterImpl" parent="baseAdapter"/>
+
+  <bean id="notificationAdapter" class="com.itsoninc.das.common.json.adapter.NotificationAdapterImpl">
+    <property name="cronExpressionHelper" ref="cronExpressionHelper"/>
+    <property name="localeHelper" ref="localeHelper"/>
+    <property name="buttonDisplayHelper" ref="buttonDisplayHelper"/>
+    <property name="promotionalNotificationHelper" ref="promotionalNotificationHelper"/>
+  </bean>
+
+  <bean id="accountAdapter" class="com.itsoninc.das.common.json.adapter.AccountAdapterImpl"/>
+
+  <bean id="transactionHistoryAdapter" class="com.itsoninc.das.common.json.adapter.TransactionHistoryAdapterImpl"/>
+
+  <bean id="subscriberAdapter" class="com.itsoninc.das.common.json.adapter.SubscriberAdapterImpl"/>
+
+  <bean id="smsChannelServiceUsageReportAdapter" class="com.itsoninc.das.common.sms.adapter.SmsChannelServiceUsageReportAdapterImpl" />
+
+  <bean id="portAdapter" class="com.itsoninc.das.common.json.adapter.PortAdapterImpl" />
+
+  <bean id="portStatusHistoryAdapter" class="com.itsoninc.das.common.json.adapter.PortStatusHistoryAdapterImpl" />
+
+  <!--  Dummy application properties that can be overridden -->
+  <util:properties id="applicationProperties"/>
+
+  <bean id="jsonObjectMapper" class="com.itsoninc.das.common.json.DasObjectMapper" />
+
+  <bean id="cronExpressionAdapter" class="com.itsoninc.das.common.util.CronExpressionAdapterImpl"/>
+
+  <bean id="cronExpressionHelper" class="com.itsoninc.das.common.persistence.util.CronExpressionHelperImpl">
+    <property name="cronExpressionAdapter" ref="cronExpressionAdapter"/>
+  </bean>
+
+  <bean id="prorationHelper" class="com.itsoninc.das.common.shared.helper.ProrationHelperImpl"/>
+
+  <bean id="subscriberCurfewAdapter" class="com.itsoninc.das.common.json.adapter.SubscriberCurfewAdapterImpl" />
+
+  <bean id="portCarrierAdapter" class="com.itsoninc.das.common.json.adapter.PortCarrierAdapterImpl" />
+
+  <bean id="subscriberApplicationListAdapter" class="com.itsoninc.das.common.json.adapter.SubscriberApplicationListAdapterImpl" />
+
+  <bean id="dataSessionControlPolicyAdapter" class="com.itsoninc.das.common.json.adapter.DataSessionControlPolicyAdapterImpl" />
+  
+  <bean id="meidHelper" class="com.itsoninc.das.common.util.MEIDHelperImpl"/>
+
+</beans>

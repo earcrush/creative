@@ -1,0 +1,1 @@
+-- NOOP:  Base migration scripts create base data
